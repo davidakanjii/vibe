@@ -1,6 +1,7 @@
 from datetime import timedelta, timezone
 from hashlib import sha256
 from secrets import token_urlsafe, compare_digest
+from urllib.parse import urlparse
 from argon2 import PasswordHasher
 from fastapi import Depends, HTTPException, Request, Response
 from sqlalchemy import select
@@ -9,6 +10,11 @@ from .config import settings, db_session
 from .models import User, Session, Membership, now
 hasher=PasswordHasher()
 def utc(value): return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+def local_admin_mfa_skip(request):
+    return (settings.environment=='development' and settings.dev_skip_admin_mfa
+            and urlparse(settings.app_origin).hostname in ('localhost','127.0.0.1','::1')
+            and request.client is not None and request.client.host in ('127.0.0.1','::1'))
 
 def current_user(request:Request,db:DB=Depends(db_session)):
     token=request.cookies.get('vs_session','')
@@ -35,6 +41,7 @@ def manager(db,user,org_id):
     if not member: raise HTTPException(403,'Organisation management permission required')
 
 def require_admin(request:Request,user:User=Depends(current_user)):
+    if user.platform_admin and local_admin_mfa_skip(request): return user
     if not user.platform_admin or not request.state.session.mfa_verified or not user.mfa_secret_encrypted or not user.mfa_confirmed:
         raise HTTPException(403,'Administrator with a verified MFA session required')
     return user

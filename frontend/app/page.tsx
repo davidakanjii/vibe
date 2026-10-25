@@ -35,7 +35,7 @@ function App() {
   const [filters, setFilters] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
   const [offline, setOffline] = useState(false);
-  const session = useQuery({ queryKey: ['session'], queryFn: () => api<{ user: User }>('/auth/me') });
+  const session = useQuery({ queryKey: ['session'], queryFn: () => api<{ user: User; development_mfa_skip?: boolean }>('/auth/me') });
   const events = useQuery({ queryKey: ['events'], queryFn: () => api<Event[]>('/events') });
   const user = session.data?.user;
   useEffect(() => {
@@ -63,7 +63,7 @@ function App() {
     <div className="shell">
       <header className="topbar"><button className="icon-button mobile-toggle" aria-label="Open menu" onClick={() => setMobile(!mobile)}><Menu size={22} /></button><div className="breadcrumb">Your next experience <span>/</span> <b>{view}</b></div><div className="top-actions"><label className="location-select"><MapPin size={16} /><select aria-label="Event location" value={city} onChange={e => setCity(e.target.value)}>{['All Nigeria', 'Lagos', 'Abuja', 'Port Harcourt', 'Ibadan'].map(c => <option key={c}>{c}</option>)}</select><ChevronDown size={13} /></label><span className="top-divider" />{user ? <><button className="avatar" title={user.display_name} onClick={() => navigate('Settings')}>{user.display_name.slice(0, 2).toUpperCase()}</button><button className="icon-button" aria-label="Sign out" onClick={async () => { try { await api('/auth/logout', { method: 'POST' }); cache.clear(); cache.setQueryData(['session'], null); setNotice('You have signed out.'); } catch (e) { setNotice((e as Error).message); } }}><LogOut size={17} /></button></> : <button className="button small" onClick={() => setAuth('login')}>Join the vibe <ArrowUpRight size={15} /></button>}</div></header>
       <main id="main">
-        {offline && <div className="status-banner">You’re offline. Live audio and account actions need a connection.</div>}
+        {session.data?.development_mfa_skip && <div className="status-banner">Local testing: administrator authenticator is temporarily skipped. Password authentication is still required.</div>}{offline && <div className="status-banner">You’re offline. Live audio and account actions need a connection.</div>}
         {events.data?.some(e => e.description.startsWith('[Sample]')) && <div className="status-banner">Local sample data · These fictional events are for development. No tickets or live streams are being sold.</div>}
         {view === 'Discover' && <>
           <section className="page-title"><div><div className="eyebrow"><span /> GO OUT. TUNE IN. BELONG.</div><h1>Find your frequency<span>.</span></h1><p>Unforgettable nights. Your favourite sounds. Your kind of people.</p></div><div className="date-note"><Globe2 size={15} /><span>Rooted in Nigeria.<br /><b>Connected to everywhere.</b></span></div></section>
@@ -77,7 +77,7 @@ function App() {
           <section className="community-strip"><div className="community-orbit"><Users size={30} /><span /><i /></div><div><span className="eyebrow muted">BETTER TOGETHER</span><h2>Find your people.<br className="mobile-break" /> Make some memories.</h2><p>The conversation starts before the night does.</p></div><button className="outline-button" onClick={() => navigate('Community')}>Meet the community <ArrowUpRight size={16} /></button></section>
         </>}
         {view === 'Live rooms' && <><SectionTitle eyebrow="PICK A CHANNEL. FEEL THE CONNECTION." title="A different way to go live." detail="Join an authorised event, put on your headphones, and choose your DJ." /><div className="info-note"><Headphones size={19} /><span>Audio travels over your internet connection. Your phone connects to your headphones through Bluetooth. Live playback requires event access.</span></div><div className="event-grid">{(events.data || []).filter(e => e.status === 'live').map((event, i) => <EventCard key={event.id} event={event} index={i} onOpen={() => setSelected(event)} />)}</div>{!events.data?.some(e => e.status === 'live') && <Empty icon={<AudioLines />} title="The next set is warming up." detail="Authorised live events will appear here. An organiser must activate the event before listeners can join." action="Discover upcoming events" onAction={() => navigate('Discover')} />}</>}
-        {view === 'Administration' && user?.platform_admin && <AdminPortal notify={setNotice} />}
+        {view === 'Administration' && user?.platform_admin && <AdminPortal notify={setNotice} developmentMfaSkip={!!session.data?.development_mfa_skip} />}
         {view === 'Community' && <Community user={user} onAuth={() => setAuth('login')} notify={setNotice} />}
         {view === 'Organiser' && <Studio user={user} onAuth={() => setAuth('login')} notify={setNotice} onEvent={setSelected} />}
         {view === 'My tickets' && <><SectionTitle eyebrow="LESS QUEUING. MORE LIVING." title="Your nights, all together." detail="Your verified ticket purchases will appear here." />{user ? <Tickets /> : <Empty icon={<Ticket />} title="Your next night deserves a place here." detail="Sign in to view your ticket purchases and booking status." action="Sign in" onAction={() => setAuth('login')} />}</>}

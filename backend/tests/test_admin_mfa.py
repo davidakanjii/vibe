@@ -142,3 +142,27 @@ def test_malformed_authenticator_code_stays_rejected(setup):
     client,_=setup
     result=client.post('/api/auth/login',headers=ORIGIN,json={'email':'alice@example.test','password':'a-long-password-458','otp':'123'})
     assert result.status_code==422
+
+def test_explicit_local_skip_keeps_password_and_admin_checks(setup,mfa_key,monkeypatch):
+    client,factory=setup; make_pending(factory)
+    monkeypatch.setattr(settings,'dev_skip_admin_mfa',True)
+    assert client.post('/api/auth/login',headers=ORIGIN,json={'email':'TestAdmin','password':'wrong'}).status_code==401
+    result=client.post('/api/auth/login',headers=ORIGIN,json={'email':'TestAdmin','password':'test-only-admin-password'})
+    assert result.status_code==200 and result.json()['mfa_verified'] is False
+    assert client.get('/api/me').json()['development_mfa_skip'] is True
+    assert client.get('/api/admin/metrics').status_code==200
+    monkeypatch.setattr(settings,'environment','production')
+    assert client.get('/api/admin/metrics').status_code==403
+    monkeypatch.setattr(settings,'environment','development')
+    monkeypatch.setattr(settings,'app_origin','https://public.example.test')
+    assert client.get('/api/admin/metrics').status_code==403
+    monkeypatch.setattr(settings,'app_origin','http://localhost:3000')
+    monkeypatch.setattr(settings,'dev_skip_admin_mfa',False)
+    assert client.get('/api/admin/metrics').status_code==403
+
+def test_local_skip_rejects_non_loopback_clients(setup,monkeypatch):
+    from app.security import local_admin_mfa_skip
+    from starlette.requests import Request
+    monkeypatch.setattr(settings,'dev_skip_admin_mfa',True)
+    request=Request({'type':'http','client':('203.0.113.5',50000),'headers':[]})
+    assert local_admin_mfa_skip(request) is False

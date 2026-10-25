@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from .config import settings, db_session
 from .models import *
 from .schemas import *
-from .security import current_user, issue_session, profile, manager, hasher, utc, require_admin
+from .security import current_user, issue_session, profile, manager, hasher, utc, require_admin, local_admin_mfa_skip
 DUMMY_PASSWORD_HASH=hasher.hash('constant-time-invalid-account-password')
 app=FastAPI(title='VibeSync API',version='0.1.0')
 D=Depends(db_session); U=Depends(current_user)
@@ -62,14 +62,16 @@ def login(data:Login,request:Request,response:Response,db:DB=D):
     except Exception: valid=False
     if not valid or user.suspended: raise HTTPException(401,'Invalid credentials')
     verified=False
-    if user.platform_admin:
+    if user.platform_admin and local_admin_mfa_skip(request):
+        audit(db,user,'admin.login.local_mfa_skip',user.id)
+    elif user.platform_admin:
         if not user.mfa_confirmed: raise HTTPException(403,'MFA enrollment required')
         from .mfa import verify_fresh_totp
         verified=verify_fresh_totp(db,user,data.otp)
     return issue_session(db,user,response,mfa_verified=verified)
 @app.get('/api/auth/me')
 @app.get('/api/me')
-def me(request:Request,user:User=U): return {'user':profile(user),'csrf_token':request.state.session.csrf,'mfa_verified':request.state.session.mfa_verified}
+def me(request:Request,user:User=U): return {'user':profile(user),'csrf_token':request.state.session.csrf,'mfa_verified':request.state.session.mfa_verified,'development_mfa_skip':bool(user.platform_admin and local_admin_mfa_skip(request))}
 @app.post('/api/auth/logout',status_code=204)
 def logout(request:Request,response:Response,user:User=U,db:DB=D):
     db.delete(db.get(Session,request.state.session.token_hash)); db.commit()

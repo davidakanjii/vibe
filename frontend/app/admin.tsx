@@ -10,7 +10,7 @@ type AdminOrg = { id: string; name: string; licence: { expires_at: string; max_c
 type Metrics = { registered_users: number; live_events: number; posts: number; verified_ticket_revenue_minor: number };
 type Audit = { id: string; actor_id: string | null; action: string; resource_id: string; created_at: string };
 
-export default function AdminPortal({ notify }: { notify: (value: string) => void }) {
+export default function AdminPortal({ notify, developmentMfaSkip = false }: { notify: (value: string) => void; developmentMfaSkip?: boolean }) {
   const cache = useQueryClient();
   const [tab, setTab] = useState('Overview'); const [busy, setBusy] = useState(false);
   const metrics = useQuery({ queryKey: ['admin', 'metrics'], queryFn: () => api<Metrics>('/admin/metrics') });
@@ -28,7 +28,7 @@ export default function AdminPortal({ notify }: { notify: (value: string) => voi
     catch (error) { notify((error as Error).message); } finally { setBusy(false); }
   }
   return <>
-    <section className="page-title"><div><div className="eyebrow"><span />PLATFORM OPERATIONS</div><h1>Keep the culture moving.</h1><p>Verified administrator session. Controls are authorised and audited by the API.</p></div><span className="soft-tag"><ShieldCheck size={13} /> MFA protected</span></section>
+    <section className="page-title"><div><div className="eyebrow"><span />PLATFORM OPERATIONS</div><h1>Keep the culture moving.</h1><p>Administrator controls are authorised and audited by the API.</p></div><span className="soft-tag"><ShieldCheck size={13} />{developmentMfaSkip ? 'Local testing · MFA skipped' : 'MFA protected'}</span></section>
     <div className="admin-tabs" aria-label="Administration sections">{['Overview', 'Accounts', 'Licensing', 'Audit log'].map(value => <button key={value} onClick={() => setTab(value)} className={value === tab ? 'selected' : ''}>{value}</button>)}<button aria-label="Refresh administration data" onClick={() => cache.invalidateQueries({ queryKey: ['admin'] })}><RefreshCw size={15} /></button></div>
     {metrics.isError ? <div className="form-error" role="alert">{metrics.error.message} Sign out and sign in using a verified administrator authenticator code.</div> : <>
       {tab === 'Overview' && <><div className="metric-grid">{[

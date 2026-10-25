@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     database_url: str='sqlite:///./vibesync.db'
     app_origin: str='http://localhost:3000'
     environment: str='development'
+    dev_skip_admin_mfa: bool=False
     paystack_secret_key: str=''
     livekit_api_key: str=''
     livekit_api_secret: str=''

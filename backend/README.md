@@ -20,6 +20,8 @@ The initial migration uses frozen metadata in alembic/initial_schema.py. Future 
 
 ## Privileged administrator setup and MFA
 
+For explicitly approved loopback-only development testing, set `DEV_SKIP_ADMIN_MFA=true` in an ignored backend `.env` and restart the API. The default is false. The skip requires `ENVIRONMENT=development`, a loopback application origin and a loopback client address. Password and administrator checks still apply, logins are audited, and sessions are not falsely marked MFA-verified. Production and non-loopback clients reject the skip. Set the flag to false and restart to restore mandatory MFA; existing password-only sessions immediately lose privileged access. This switch is deliberately absent from deployment templates.
+
 No administrator is created at registration or application startup. Keep `MFA_ENCRYPTION_KEY` in the deployment secret store (Fernet key, generated once using `Fernet.generate_key()`); preserve a protected backup. Rotating this key without re-enrollment makes existing encrypted identities unusable. Never publish `.env`, database copies, authenticator secrets or recovery credentials.
 
 After setting the key and running `alembic upgrade head`, an operator with protected deployment/database access runs:

@@ -15,12 +15,13 @@ def setup(monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings,'app_origin','http://localhost:3000')
     monkeypatch.setattr(settings,'environment','development')
+    monkeypatch.setattr(settings,'dev_skip_admin_mfa',False)
     engine=create_engine('sqlite://',connect_args={'check_same_thread':False},poolclass=StaticPool)
     Base.metadata.create_all(engine); factory=sessionmaker(engine,expire_on_commit=False)
     def override():
         with factory() as db: yield db
     app.dependency_overrides[db_session]=override; _attempts.clear()
-    with TestClient(app) as client: yield client,factory
+    with TestClient(app,client=('127.0.0.1',50000)) as client: yield client,factory
     app.dependency_overrides.clear(); engine.dispose()
 def signup(client,email='alice@example.test'):
     result=client.post('/api/auth/register',headers={'origin':'http://localhost:3000'},json={'email':email,'password':'a-long-password-458','display_name':'Alice'})
