@@ -107,10 +107,13 @@ function Auth({ mode, setMode, onClose, onSuccess }: { mode: 'login' | 'register
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError('');
     try {
-      const payload = enrollment ? { otp: credentials.otp } : mode === 'login' ? credentials : Object.fromEntries(new FormData(e.currentTarget));
+      const payload = enrollment ? { otp: credentials.otp.trim() } : mode === 'login' ? { email: credentials.email.trim(), password: credentials.password, ...(credentials.otp.trim() ? { otp: credentials.otp.trim() } : {}) } : Object.fromEntries(new FormData(e.currentTarget));
       await api(enrollment ? '/auth/mfa/enroll/confirm' : '/auth/' + mode, { method: 'POST', body: JSON.stringify(payload) });
       setCredentials({ email: '', password: '', otp: '' }); setEnrollment(null); onSuccess();
-    } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
+    } catch (err) {
+      if (!enrollment && mode === 'login' && (err as Error).message === 'MFA enrollment required') await enroll();
+      else setError((err as Error).message);
+    } finally { setBusy(false); }
   }
   async function enroll() {
     setBusy(true); setError('');

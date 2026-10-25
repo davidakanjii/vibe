@@ -120,3 +120,25 @@ def test_bootstrap_reset_revokes_sessions_and_confirmation(setup,mfa_key):
         assert db.scalar(select(Session).where(Session.user_id==user_id)) is None
         assert not db.get(User,user_id).mfa_confirmed
     assert client.get('/api/me').status_code==401
+
+@pytest.mark.parametrize('blank_otp',['','   ',None])
+def test_blank_optional_code_reaches_authentication_not_schema_error(setup,mfa_key,blank_otp):
+    client,factory=setup
+    signup(client)
+    client.cookies.clear()
+    member=client.post('/api/auth/login',headers=ORIGIN,json={'email':'alice@example.test','password':'a-long-password-458','otp':blank_otp})
+    assert member.status_code==200
+    client.cookies.clear()
+    make_pending(factory)
+    pending=client.post('/api/auth/login',headers=ORIGIN,json={'email':'TestAdmin','password':'test-only-admin-password','otp':blank_otp})
+    assert pending.status_code==403 and pending.json()['detail']=='MFA enrollment required'
+    enroll(client)
+    client.cookies.clear()
+    enrolled=client.post('/api/auth/login',headers=ORIGIN,json={'email':'TestAdmin','password':'test-only-admin-password','otp':blank_otp})
+    assert enrolled.status_code==401 and enrolled.json()['detail']=='MFA code required'
+    assert client.get('/api/admin/metrics').status_code==401
+
+def test_malformed_authenticator_code_stays_rejected(setup):
+    client,_=setup
+    result=client.post('/api/auth/login',headers=ORIGIN,json={'email':'alice@example.test','password':'a-long-password-458','otp':'123'})
+    assert result.status_code==422

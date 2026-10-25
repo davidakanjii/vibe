@@ -14,6 +14,11 @@ class Login(BaseModel):
     email:str
     password:str=Field(max_length=128)
     otp:str|None=Field(default=None,pattern='^[0-9]{6}$')
+    @field_validator('otp',mode='before')
+    @classmethod
+    def optional_otp(cls,value):
+        if isinstance(value,str): return value.strip() or None
+        return value
 class OrganisationIn(BaseModel): name:str=Field(min_length=2,max_length=120)
 class EventIn(BaseModel):
     organisation_id:str
