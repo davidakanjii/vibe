@@ -7,6 +7,7 @@ Verified locally on Windows with Node.js, bundled Python and SQLite. This is imp
 | `frontend: npm run build` | Passed Next.js production compile, TypeScript, static generation and standalone output |
 | `frontend: npm run typecheck` | Passed |
 | Standalone production start | `npm start` wrapper ran the compiled standalone server; page, event API proxy, manifest, PNG icon and offline HTML returned HTTP 200 |
+| Hosting startup regression | 3 Node tests passed: inherited container HOSTNAME overridden to 0.0.0.0, hosting PORT retained, assets copied, missing-build failure explained; remote redeployment still requires verification |
 | `backend: pytest -q` | 27 passed after administrator/MFA, blank-code and local-only skip regression checks; one dependency deprecation warning in Starlette TestClient/httpx |
 | Alembic `upgrade head` | Passed initial, `0002` and `0003` upgrades against local SQLite; production PostgreSQL remains a CI/deployment check |
 | `python infra/smoke_local.py` | Passed through the actual Next.js proxy and running API, with persistent labelled test records |

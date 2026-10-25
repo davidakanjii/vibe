@@ -11,7 +11,9 @@ cpSync(resolve(root, 'public'), resolve(standalone, 'public'), { recursive: true
 cpSync(resolve(root, '.next/static'), resolve(standalone, '.next/static'), { recursive: true, force: true });
 const server = spawn(process.execPath, [resolve(standalone, 'server.js')], {
   cwd: standalone,
-  env: { ...process.env, NODE_ENV: 'production', HOSTNAME: process.env.HOSTNAME || '0.0.0.0', PORT: process.env.PORT || '3000' },
+  // Hosting runtimes set HOSTNAME to their container name. The HTTP server
+  // must listen on all interfaces so their load balancer can reach it.
+  env: { ...process.env, NODE_ENV: 'production', HOSTNAME: '0.0.0.0', PORT: process.env.PORT || '3000' },
   stdio: 'inherit',
 });
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => server.kill(signal));
