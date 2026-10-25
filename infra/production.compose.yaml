@@ -1,0 +1,17 @@
+# Start from repository root: docker compose -f compose.yaml -f infra/production.compose.yaml up -d --build
+# This adds HTTPS for the web/Next.js API proxy; audio needs its own TLS/TURN configuration.
+services:
+  edge:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?Set your DNS hostname}
+    ports: [80:80, 443:443]
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web]
+    restart: unless-stopped
+volumes:
+  caddy-data:
+  caddy-config:

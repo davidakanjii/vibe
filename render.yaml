@@ -1,0 +1,60 @@
+# Free preview only. Read docs/render-preview.md before creating resources.
+# Repository root must be this vibesync directory.
+services:
+  - type: web
+    name: vibesync-api-preview
+    runtime: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python infra/render_api_start.py
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: ENVIRONMENT
+        value: production
+      - key: APP_ORIGIN
+        sync: false
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vibesync-db-preview
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: vibesync-redis-preview
+          type: keyvalue
+          property: connectionString
+  - type: web
+    name: vibesync-web-preview
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: '1'
+      - key: API_INTERNAL_URL
+        sync: false
+  - type: keyvalue
+    name: vibesync-redis-preview
+    region: frankfurt
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+databases:
+  - name: vibesync-db-preview
+    region: frankfurt
+    plan: free
+    databaseName: vibesync
+    user: vibesync
+    ipAllowList: []

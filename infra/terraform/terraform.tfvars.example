@@ -1,0 +1,6 @@
+aws_region    = "eu-west-1"
+vpc_id        = "vpc-REPLACE"
+subnet_id     = "subnet-REPLACE"
+ubuntu_ami_id = "ami-REPLACE"
+key_name      = "REPLACE-existing-key-name"
+admin_cidr    = "203.0.113.1/32"
